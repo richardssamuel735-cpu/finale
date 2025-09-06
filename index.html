@@ -214,6 +214,372 @@
   </script>
 </body>
 </html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Accident Detection Dashboard — Demo</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/modern-normalize/modern-normalize.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root{--accent:#0b6efd;--danger:#d92b2b}
+    body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; margin:0; background:#f6f8fb}
+    header{background:#fff;padding:12px 18px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+    h1{font-size:18px;margin:0}
+    .container{display:grid;grid-template-columns:360px 1fr;gap:16px;padding:16px}
+    .card{background:#fff;border-radius:10px;padding:12px;box-shadow:0 1px 6px rgba(19,24,31,.04)}
+    .left{display:flex;flex-direction:column;gap:12px}
+    label{font-size:13px;color:#333}
+    input,select,textarea,button{font-size:14px;padding:8px;border-radius:8px;border:1px solid #e6e9ef}
+    button{background:var(--accent);color:#fff;border:none;cursor:pointer}
+    .danger{background:var(--danger)}
+    #map{height:640px;border-radius:8px}
+    .log{height:240px;overflow:auto;background:#0f1724;color:#fff;padding:8px;border-radius:8px;font-family:monospace;font-size:13px}
+    .row{display:flex;gap:8px;align-items:center}
+    .small{font-size:13px;color:#555}
+    .pill{background:#eef3ff;padding:6px 8px;border-radius:999px;font-weight:600}
+    .section-title{font-weight:700;margin-bottom:8px}
+    .marker-list{max-height:120px;overflow:auto}
+    .actions{display:flex;gap:8px}
+    .recording{color:var(--danger);font-weight:700}
+    footer{padding:8px 16px;font-size:13px;color:#666}
+  </style>
+</head>
+<body>
+  <header>
+    <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='36' height='36'><rect rx='8' width='36' height='36' fill='%230b6efd'/><text x='50%' y='55%' font-size='18' text-anchor='middle' fill='white' font-family='Arial'>AD</text></svg>" alt="logo"/>
+    <h1>Accident Detection Dashboard — DEMO</h1>
+    <div style="margin-left:auto" class="small">Simulated demo — not connected to vehicles or emergency services</div>
+  </header>
+
+  <div class="container">
+    <div class="left">
+      <div class="card">
+        <div class="section-title">Accident Detection</div>
+        <div class="small">Sensor status: <span id="sensorStatus">idle</span></div>
+        <div style="margin-top:8px" class="row">
+          <button id="enableMotionBtn">Enable Motion Listener (for phones)</button>
+          <button id="simulateAccidentBtn" class="danger">Simulate Accident</button>
+        </div>
+        <div style="margin-top:8px" class="small">Sensitivity (g): <input id="sensitivity" type="number" value="2" min="0.5" step="0.1" style="width:80px"/></div>
+        <hr/>
+        <div class="section-title">Speed & Engine Control</div>
+        <div class="small">Enter current speed (km/h): </div>
+        <div class="row" style="margin-top:8px">
+          <input id="speedInput" type="number" value="40"/>
+          <button id="applySpeedBtn">Apply Speed</button>
+          <button id="setLimitBtn">Set Limit to 120</button>
+        </div>
+        <div style="margin-top:8px" class="small">Engine: <span id="engineState">ON</span></div>
+        <hr/>
+        <div class="section-title">Emergency Contacts & Nearby</div>
+        <div class="small">Show sample Police & Ambulance markers on the map</div>
+        <div style="margin-top:8px" class="row">
+          <button id="showMarkersBtn">Show Markers</button>
+          <button id="notifyAllBtn" class="danger">Send Alert (demo)</button>
+        </div>
+
+        <hr/>
+        <div class="section-title">Insurance Lookup</div>
+        <div class="small">Enter vehicle plate no. (demo database)</div>
+        <div class="row" style="margin-top:8px">
+          <input id="plateInput" placeholder="TN10AB1234" />
+          <button id="checkInsBtn">Check Insurance</button>
+        </div>
+        <div id="insResult" class="small" style="margin-top:8px"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Recording (Audio / Video)</div>
+        <div class="small">You can record audio and/or video of the incident (browser permission required)</div>
+        <div style="margin-top:8px" class="actions">
+          <button id="startRecBtn">Start Recording</button>
+          <button id="stopRecBtn" disabled>Stop Recording</button>
+          <a id="downloadLink" style="display:none">Download</a>
+        </div>
+        <div id="recStatus" class="small" style="margin-top:8px">Not recording</div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Patient / Incident Form</div>
+        <div class="small">Fill basic details to send with alert</div>
+        <input id="patientName" placeholder="Name" style="margin-top:8px"/>
+        <input id="patientAge" placeholder="Age" style="margin-top:8px"/>
+        <textarea id="patientNotes" placeholder="Notes" style="margin-top:8px"></textarea>
+        <div style="margin-top:8px" class="row">
+          <button id="sendPatientBtn">Send Patient Info (demo)</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">AI Analysis (Local heuristic)</div>
+        <div class="small">A simple on-device heuristic inspects acceleration/speed/controls and marks severity — placeholder for a real ML model.</div>
+        <div style="margin-top:8px" class="row">
+          <button id="runAiBtn">Run AI Analysis on last event</button>
+          <div id="aiResult" class="small" style="margin-left:8px">—</div>
+        </div>
+        <div style="margin-top:8px" class="small">Note: For production you'd deploy an ML model on-device or on a secure backend.</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div style="display:flex;gap:12px;align-items:center;justify-content:space-between">
+          <div>
+            <div class="section-title">Live Map — Your Location & Nearest Services</div>
+            <div class="small">Shows simulated markers for police & ambulance. Use browser geolocation for live position.</div>
+          </div>
+          <div class="pill">Demo Map</div>
+        </div>
+        <div id="map"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 360px;gap:12px;margin-top:12px">
+        <div class="card">
+          <div class="section-title">Event Log</div>
+          <div class="log" id="log"></div>
+        </div>
+        <div class="card">
+          <div class="section-title">Directory (sample)</div>
+          <div class="small">Sample doctors and their courses (demonstration — NOT exhaustive)</div>
+          <div class="marker-list" id="doctorList">
+            <!-- populated by JS -->
+          </div>
+          <hr/>
+          <div class="section-title">Nearby Resources</div>
+          <div class="small">Sample emergency numbers</div>
+          <ul class="small">
+            <li>108 — Ambulance (sample)</li>
+            <li>Police Helpline 100</li>
+            <li>Local Hospital: +91-44-1234-5678</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>Important: This is a browser-only demo. Real vehicle control (engine off), 108 integration, police dispatch, and automatic vehicle commands require manufacturer-level access, secure backend APIs, legal agreements and must follow safety & privacy regulations.</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// --------------------------- Demo data & state -----------------------------
+const demoPolice = [
+  {name:'Central Police Station', lat:13.0827, lng:80.2707},
+  {name:'North Police Outpost', lat:13.0867, lng:80.265},
+]
+const demoAmbulances = [
+  {name:'Ambulance A1', lat:13.080, lng:80.273},
+  {name:'Ambulance A2', lat:13.085, lng:80.279},
+]
+const demoDoctors = [
+  {name:'Dr. A. Sharma', course:'MBBS, General Medicine'},
+  {name:'Dr. B. Rao', course:'MD - Emergency Medicine'},
+  {name:'Dr. C. Singh', course:'MS - Orthopedics'},
+]
+const demoInsuranceDB = { 'TN10AB1234': {policy:'ACTIVE', expiry:'2026-04-15'}, 'MH20CD9999':{policy:'LAPSED', expiry:'2022-09-01'}}
+let lastEvent = null
+let engineOn = true
+let speedLimit = 120
+let mediaRecorder = null
+let recordedChunks = []
+
+// --------------------------- Map init -------------------------------------
+const map = L.map('map').setView([13.0827,80.2707],13)
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map)
+let userMarker = null
+let otherMarkers = []
+
+function log(msg){
+  const el = document.getElementById('log')
+  const now = new Date().toLocaleString()
+  el.innerHTML = `[${now}] ${msg}\n` + el.innerHTML
+}
+
+// --------------------------- Geolocation ---------------------------------
+function updatePositionOnMap(pos){
+  const lat = pos.coords.latitude
+  const lng = pos.coords.longitude
+  if(!userMarker) userMarker = L.marker([lat,lng],{title:'You'}).addTo(map)
+  else userMarker.setLatLng([lat,lng])
+  map.setView([lat,lng],14)
+}
+
+if(navigator.geolocation){
+  navigator.geolocation.getCurrentPosition(updatePositionOnMap, ()=>{}, {enableHighAccuracy:true})
+  navigator.geolocation.watchPosition(updatePositionOnMap, ()=>{}, {enableHighAccuracy:true})
+}
+
+// --------------------------- Markers -------------------------------------
+function showMarkers(){
+  otherMarkers.forEach(m=>map.removeLayer(m))
+  otherMarkers = []
+  demoPolice.forEach(p=>{ otherMarkers.push(L.marker([p.lat,p.lng]).bindPopup(p.name).addTo(map)) })
+  demoAmbulances.forEach(a=>{ otherMarkers.push(L.marker([a.lat,a.lng],{icon:L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/684/684908.png',iconSize:[32,32]})}).bindPopup(a.name).addTo(map)) })
+  log('Markers for police & ambulances added to map')
+}
+
+// --------------------------- Motion / Accident Detection ------------------
+let motionEnabled = false
+let lastAccel = {x:0,y:0,z:0}
+function enableMotion(){
+  if(typeof DeviceMotionEvent === 'undefined'){
+    document.getElementById('sensorStatus').innerText = 'not supported on desktop'
+    return
+  }
+  function handler(e){
+    const g = document.getElementById('sensitivity').valueAsNumber || 2
+    const a = e.accelerationIncludingGravity || e.acceleration || {x:0,y:0,z:0}
+    const dx = (a.x - lastAccel.x)
+    const dy = (a.y - lastAccel.y)
+    const dz = (a.z - lastAccel.z)
+    const mag = Math.sqrt(dx*dx+dy*dy+dz*dz)
+    lastAccel = {x:a.x||0,y:a.y||0,z:a.z||0}
+    document.getElementById('sensorStatus').innerText = `g≈${mag.toFixed(2)}`
+    if(mag >= g){
+      handleAccident({type:'motion', magnitude:mag})
+    }
+  }
+  window.addEventListener('devicemotion', handler)
+  motionEnabled = true
+  document.getElementById('sensorStatus').innerText = 'listening'
+  log('Device motion listener enabled')
+}
+
+function simulateAccident(){
+  handleAccident({type:'simulated', magnitude:5})
+}
+
+function handleAccident(event){
+  lastEvent = {time:Date.now(), event}
+  log('Accident Detected — ' + JSON.stringify(event))
+  document.getElementById('aiResult').innerText = '—'
+  // run AI analysis
+  const severity = predictSeverity(event)
+  log('AI Severity: '+severity)
+  // Send alerts
+  mockSendAlerts({severity, event, patient:{name:document.getElementById('patientName').value}})
+  // Auto engine off on high severity and speed > limit
+  if(severity==='high'){
+    engineOff('High severity detected')
+  }
+}
+
+function predictSeverity(ev){
+  // Local heuristic (very simple): magnitude & speed
+  const mag = ev.magnitude || 0
+  const speed = Number(document.getElementById('speedInput').value) || 0
+  const score = mag*10 + speed/20
+  if(score>60) return 'high'
+  if(score>30) return 'medium'
+  return 'low'
+}
+
+// --------------------------- Engine control (SIMULATED) ------------------
+function engineOff(reason){
+  engineOn = false
+  document.getElementById('engineState').innerText = 'OFF (simulated)'
+  log('Engine shutoff (SIMULATED): '+reason)
+}
+function engineOnNow(){engineOn=true;document.getElementById('engineState').innerText='ON';log('Engine ON')}
+
+// --------------------------- Speed monitoring -----------------------------
+document.getElementById('applySpeedBtn').addEventListener('click', ()=>{
+  const sp = Number(document.getElementById('speedInput').value) || 0
+  log('Speed applied: '+sp+' km/h')
+  if(sp>speedLimit){
+    log(`Speed limit exceeded (${speedLimit}). Triggering alert & engine off (simulated).`)
+    mockSendAlerts({severity:'high', reason:'overspeed', speed:sp})
+    engineOff('speed exceeded')
+  }
+})
+document.getElementById('setLimitBtn').addEventListener('click', ()=>{speedLimit=120;log('Speed limit set to 120 km/h')})
+
+// --------------------------- Mock sending alerts --------------------------
+function mockSendAlerts(payload){
+  // This simulates calls to police / ambulance / 108. For production you must call secure backend APIs
+  log('Sending alerts to nearest police & ambulance — payload: '+JSON.stringify(payload))
+  // show a popup on map for nearest ambulance
+  if(userMarker){
+    const latlng = userMarker.getLatLng()
+    const route = L.polyline([latlng, [demoAmbulances[0].lat,demoAmbulances[0].lng]]).addTo(map)
+    setTimeout(()=>map.removeLayer(route), 20_000)
+  }
+}
+
+// --------------------------- Insurance check ------------------------------
+document.getElementById('checkInsBtn').addEventListener('click', ()=>{
+  const p = document.getElementById('plateInput').value.trim().toUpperCase()
+  const res = demoInsuranceDB[p]
+  const out = document.getElementById('insResult')
+  if(res) out.innerText = `Policy: ${res.policy} — Expiry: ${res.expiry}`
+  else out.innerText = `No record in demo DB. Real lookup requires government / insurer API.`
+})
+
+// --------------------------- Recording -----------------------------------
+const startRec = async ()=>{
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true,video:true})
+    recordedChunks = []
+    mediaRecorder = new MediaRecorder(stream)
+    mediaRecorder.ondataavailable = e=>{ if(e.data.size>0) recordedChunks.push(e.data) }
+    mediaRecorder.onstop = ()=>{
+      const blob = new Blob(recordedChunks,{type:'video/webm'})
+      const url = URL.createObjectURL(blob)
+      const a = document.getElementById('downloadLink')
+      a.style.display='inline-block'; a.href=url; a.download='incident.webm'; a.textContent='Download recording'
+      log('Recording saved (client-side).')
+    }
+    mediaRecorder.start()
+    document.getElementById('startRecBtn').disabled = true
+    document.getElementById('stopRecBtn').disabled = false
+    document.getElementById('recStatus').innerText = 'Recording...'
+    log('Recording started')
+  }catch(err){
+    alert('Permission denied or device not available: '+err.message)
+  }
+}
+const stopRec = ()=>{
+  if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop()
+  document.getElementById('startRecBtn').disabled = false
+  document.getElementById('stopRecBtn').disabled = true
+  document.getElementById('recStatus').innerText = 'Stopped'
+}
+
+// --------------------------- Patient send --------------------------------
+document.getElementById('sendPatientBtn').addEventListener('click', ()=>{
+  const payload = {name:document.getElementById('patientName').value, age:document.getElementById('patientAge').value, notes:document.getElementById('patientNotes').value}
+  log('Patient info sent (demo): '+JSON.stringify(payload))
+})
+
+// --------------------------- AI Analysis button ---------------------------
+document.getElementById('runAiBtn').addEventListener('click', ()=>{
+  if(!lastEvent){ document.getElementById('aiResult').innerText='No recent event'; return }
+  const s = predictSeverity(lastEvent.event)
+  document.getElementById('aiResult').innerText = s
+  log('AI run on last event -> '+s)
+})
+
+// --------------------------- UI bindings ---------------------------------
+document.getElementById('enableMotionBtn').addEventListener('click', enableMotion)
+document.getElementById('simulateAccidentBtn').addEventListener('click', simulateAccident)
+document.getElementById('showMarkersBtn').addEventListener('click', showMarkers)
+document.getElementById('notifyAllBtn').addEventListener('click', ()=>mockSendAlerts({severity:'medium', reason:'manual_alert'}))
+document.getElementById('startRecBtn').addEventListener('click', startRec)
+document.getElementById('stopRecBtn').addEventListener('click', stopRec)
+
+// --------------------------- Populate doctor list -------------------------
+const docEl = document.getElementById('doctorList')
+demoDoctors.forEach(d=>{ const div = document.createElement('div'); div.className='small'; div.style.padding='6px 0'; div.innerHTML=`<strong>${d.name}</strong><div>${d.course}</div>`; docEl.appendChild(div) })
+
+// --------------------------- Init log -----------------------------------
+log('Dashboard loaded — demo mode')
+
+</script>
+</body>
+</html>
+
 
 
 
