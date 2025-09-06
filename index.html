@@ -124,4 +124,96 @@
 </body>
 </html>
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Smart Accident Detection & Emergency System</title>
+  <style>
+    body { font-family: Arial; background: #e9f5ff; padding: 20px; }
+    .container { max-width: 700px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px #ccc; }
+    h2 { color: #005f99; }
+    .status-box { padding: 10px; margin-bottom: 10px; border-radius: 5px; }
+    .safe { background: #d4edda; color: #155724; }
+    .alert { background: #f8d7da; color: #721c24; }
+    .section { margin-top: 20px; }
+    input, button { width: 100%; padding: 10px; margin: 10px 0; }
+    .medical { background: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🚨 Smart Accident Detection & Emergency Response</h2>
+
+    <div id="statusBox" class="status-box safe">✅ System Normal</div>
+
+    <div class="section">
+      <h3>📊 Vehicle Telemetry</h3>
+      <p>Speed: <span id="speed">0</span> km/h</p>
+      <p>Acceleration: <span id="acceleration">0</span> m/s²</p>
+      <p>Engine Status: <span id="engine">Running</span></p>
+      <p>Fuel Level: <span id="fuel">80%</span></p>
+      <p>Location: <span id="location">Unknown</span></p>
+    </div>
+
+    <div class="section">
+      <h3>🆘 Emergency Response</h3>
+      <p id="response">No alerts sent.</p>
+    </div>
+
+    <div class="section medical" id="medicalBox" style="display:none;">
+      <h4>🩺 Medical Instructions</h4>
+      <ul>
+        <li>Check for consciousness</li>
+        <li>Stop any bleeding with pressure</li>
+        <li>Call 108 immediately</li>
+        <li>Do not move the injured unless necessary</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    function simulateTelemetry() {
+      const speed = Math.floor(Math.random() * 160); // Simulate up to 160 km/h
+      const acceleration = (Math.random() * 15).toFixed(2); // Simulate up to 15 m/s²
+      const location = "Lat: 18.1, Long: 83.4";
+      const fuel = Math.floor(Math.random() * 100) + "%";
+      const engineStatus = speed > 120 ? "Shutting Down" : "Running";
+
+      document.getElementById("speed").textContent = speed;
+      document.getElementById("acceleration").textContent = acceleration;
+      document.getElementById("location").textContent = location;
+      document.getElementById("fuel").textContent = fuel;
+      document.getElementById("engine").textContent = engineStatus;
+
+      // Send signal to control room (simulated)
+      console.log(`📡 Signal sent to control room: Speed=${speed}, Acc=${acceleration}, Location=${location}`);
+
+      if (speed > 100 && acceleration > 10) {
+        document.getElementById("statusBox").textContent = "⚠️ Accident Detected!";
+        document.getElementById("statusBox").className = "status-box alert";
+        sendEmergencyAlert(location);
+        document.getElementById("medicalBox").style.display = "block";
+      } else {
+        document.getElementById("statusBox").textContent = "✅ System Normal";
+        document.getElementById("statusBox").className = "status-box safe";
+        document.getElementById("response").textContent = "No alerts sent.";
+        document.getElementById("medicalBox").style.display = "none";
+      }
+    }
+
+    function sendEmergencyAlert(location) {
+      document.getElementById("response").textContent =
+        `🚑 Alert sent to nearest police station, hospital, and 108 ambulance at ${location}`;
+      
+      // Real-world: send data to backend
+      // fetch('/api/emergency', { method: 'POST', body: JSON.stringify({ location }) })
+    }
+
+    setInterval(simulateTelemetry, 1000); // Update every second
+  </script>
+</body>
+</html>
+
+
 
