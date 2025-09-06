@@ -61,3 +61,67 @@
   </script>
 </body>
 </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Accident Detection & Emergency Alert</title>
+  <style>
+    body { font-family: Arial; background: #f0f0f0; padding: 20px; }
+    .alert { background: red; color: white; padding: 10px; margin-bottom: 10px; }
+    .safe { background: green; color: white; padding: 10px; margin-bottom: 10px; }
+    .section { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Vehicle Accident Detection System</h1>
+  <div id="status" class="safe">System Normal</div>
+
+  <div class="section">
+    <h3>Vehicle Data</h3>
+    <p>Speed: <span id="speed">0</span> km/h</p>
+    <p>Acceleration: <span id="acceleration">0</span> m/s²</p>
+    <p>Location: <span id="location">Unknown</span></p>
+  </div>
+
+  <div class="section">
+    <h3>Emergency Response</h3>
+    <p id="response">No alerts sent.</p>
+  </div>
+
+  <script>
+    function simulateData() {
+      const speed = Math.floor(Math.random() * 120);
+      const acceleration = Math.random() * 12;
+      const location = "Lat: 18.1, Long: 83.4";
+
+      document.getElementById("speed").textContent = speed;
+      document.getElementById("acceleration").textContent = acceleration.toFixed(2);
+      document.getElementById("location").textContent = location;
+
+      if (speed > 100 && acceleration > 9) {
+        document.getElementById("status").textContent = "⚠️ Accident Detected!";
+        document.getElementById("status").className = "alert";
+        sendEmergencyAlert(location);
+      } else {
+        document.getElementById("status").textContent = "System Normal";
+        document.getElementById("status").className = "safe";
+        document.getElementById("response").textContent = "No alerts sent.";
+      }
+    }
+
+    function sendEmergencyAlert(location) {
+      // Simulated alert logic
+      document.getElementById("response").textContent =
+        `Alert sent to nearest police station, hospital, and 108 ambulance at ${location}`;
+      
+      // In real app: use fetch() to POST data to backend server
+      // fetch('/send-alert', { method: 'POST', body: JSON.stringify({ location }) })
+    }
+
+    setInterval(simulateData, 3000); // Update every 3 seconds
+  </script>
+</body>
+</html>
+
+
